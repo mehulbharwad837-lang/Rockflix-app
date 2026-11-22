@@ -62,6 +62,66 @@ const movies = [
     duration: "2h 49m",
     image: "https://image.tmdb.org/t/p/w780/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",
     description: "A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival."
+  },
+  {
+    id: 101,
+    title: "3 Idiots",
+    year: "2009",
+    rating: "8.4",
+    genre: "Hindi",
+    duration: "2h 50m",
+    image: "https://image.tmdb.org/t/p/w780/66Aajw9WnQXyVjSg8uL9gH6uQfX.jpg",
+    description: "Three engineering students follow their dreams while questioning the pressure of India's competitive education system."
+  },
+  {
+    id: 102,
+    title: "Dangal",
+    year: "2016",
+    rating: "8.3",
+    genre: "Hindi",
+    duration: "2h 41m",
+    image: "https://image.tmdb.org/t/p/w780/z6pQvKz1G2nZP0wA9nRrG5uF2kB.jpg",
+    description: "A former wrestler trains his daughters to become professional wrestling champions."
+  },
+  {
+    id: 103,
+    title: "Gadar 2",
+    year: "2023",
+    rating: "6.4",
+    genre: "Hindi",
+    duration: "2h 50m",
+    image: "https://placehold.co/780x440/151515/e50914/png?text=Gadar+2",
+    description: "Tara Singh returns to Pakistan to rescue his imprisoned son during a dangerous conflict."
+  },
+  {
+    id: 104,
+    title: "Jawan",
+    year: "2023",
+    rating: "7.0",
+    genre: "Hindi",
+    duration: "2h 49m",
+    image: "https://placehold.co/780x440/151515/e50914/png?text=Jawan",
+    description: "A man embarks on a mission to correct social wrongs and protect the common people."
+  },
+  {
+    id: 105,
+    title: "K.G.F: Chapter 2",
+    year: "2022",
+    rating: "8.2",
+    genre: "Hindi",
+    duration: "2h 48m",
+    image: "https://placehold.co/780x440/151515/e50914/png?text=KGF+Chapter+2",
+    description: "Rocky rises to the top of the Kolar Gold Fields while powerful enemies unite against him."
+  },
+  {
+    id: 106,
+    title: "Pathaan",
+    year: "2023",
+    rating: "6.6",
+    genre: "Hindi",
+    duration: "2h 26m",
+    image: "https://placehold.co/780x440/151515/e50914/png?text=Pathaan",
+    description: "An Indian agent races across the world to stop a deadly terrorist plot."
   }
 ];
 
@@ -145,9 +205,16 @@ function App() {
       setIsLoading(true);
       setCatalogError("");
       try {
-        const pages = await Promise.all([1, 2, 3, 4, 5].map(async (page) => {
+        const hindiPages = await Promise.all([1, 2, 3].map(async (page) => {
           const response = await fetch(
-            `https://api.themoviedb.org/3/movie/popular?api_key=${encodeURIComponent(apiKey)}&language=en-US&page=${page}`
+            `https://api.themoviedb.org/3/discover/movie?api_key=${encodeURIComponent(apiKey)}&language=hi-IN&region=IN&with_original_language=hi&sort_by=popularity.desc&page=${page}`
+          );
+          if (!response.ok) throw new Error(`TMDB returned ${response.status}`);
+          return response.json();
+        }));
+        const popularPages = await Promise.all([1, 2].map(async (page) => {
+          const response = await fetch(
+            `https://api.themoviedb.org/3/movie/popular?api_key=${encodeURIComponent(apiKey)}&language=en-US&region=IN&page=${page}`
           );
           if (!response.ok) throw new Error(`TMDB returned ${response.status}`);
           return response.json();
@@ -158,12 +225,16 @@ function App() {
           80: "Crime", 18: "Drama", 14: "Fantasy", 27: "Horror",
           878: "Sci-Fi", 53: "Thriller"
         };
-        const catalog = pages.flatMap((page) => page.results || []).map((movie) => ({
+        const catalog = [...hindiPages, ...popularPages].flatMap((page) => page.results || [])
+          .filter((movie, index, list) => list.findIndex((item) => item.id === movie.id) === index)
+          .map((movie) => ({
           id: movie.id,
           title: movie.title,
           year: movie.release_date ? movie.release_date.slice(0, 4) : "N/A",
           rating: Number(movie.vote_average || 0).toFixed(1),
-          genre: movie.genre_ids?.map((id) => genreNames[id]).find(Boolean) || "Movie",
+          genre: movie.original_language === "hi"
+            ? "Hindi"
+            : movie.genre_ids?.map((id) => genreNames[id]).find(Boolean) || "Movie",
           duration: "View details",
           image: movie.backdrop_path
             ? `https://image.tmdb.org/t/p/w780${movie.backdrop_path}`
