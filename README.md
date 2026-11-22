@@ -26,3 +26,13 @@ Build the debug APK:
 cd android
 ./gradlew assembleDebug
 ```
+
+## Live TMDB catalog
+
+Create a local `.env.local` file and add a TMDB API key:
+
+```bash
+VITE_TMDB_API_KEY=your_tmdb_api_key
+```
+
+Then run `npm run android:sync` or `npm run build`. Do not commit `.env.local`.

@@ -10,4 +10,5 @@ android/local.properties
 # Local environment
 .env
 .env.*
+.env.local
 *.log

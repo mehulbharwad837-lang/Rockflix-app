@@ -81,6 +81,9 @@ function App() {
   const [query, setQuery] = useState("");
   const [genre, setGenre] = useState("All");
   const [selected, setSelected] = useState(null);
+  const [liveMovies, setLiveMovies] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState("");
 
   React.useEffect(() => {
     const handleTvKeys = (event) => {
@@ -134,11 +137,58 @@ function App() {
     return () => window.removeEventListener("keydown", handleTvKeys);
   }, []);
 
-  const genres = ["All", ...new Set(movies.map((movie) => movie.genre))];
-  const filtered = useMemo(() => movies.filter((movie) => {
+  React.useEffect(() => {
+    const apiKey = import.meta.env.VITE_TMDB_API_KEY;
+    if (!apiKey) return;
+
+    const loadMovies = async () => {
+      setIsLoading(true);
+      setCatalogError("");
+      try {
+        const pages = await Promise.all([1, 2, 3, 4, 5].map(async (page) => {
+          const response = await fetch(
+            `https://api.themoviedb.org/3/movie/popular?api_key=${encodeURIComponent(apiKey)}&language=en-US&page=${page}`
+          );
+          if (!response.ok) throw new Error(`TMDB returned ${response.status}`);
+          return response.json();
+        }));
+
+        const genreNames = {
+          28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy",
+          80: "Crime", 18: "Drama", 14: "Fantasy", 27: "Horror",
+          878: "Sci-Fi", 53: "Thriller"
+        };
+        const catalog = pages.flatMap((page) => page.results || []).map((movie) => ({
+          id: movie.id,
+          title: movie.title,
+          year: movie.release_date ? movie.release_date.slice(0, 4) : "N/A",
+          rating: Number(movie.vote_average || 0).toFixed(1),
+          genre: movie.genre_ids?.map((id) => genreNames[id]).find(Boolean) || "Movie",
+          duration: "View details",
+          image: movie.backdrop_path
+            ? `https://image.tmdb.org/t/p/w780${movie.backdrop_path}`
+            : movie.poster_path
+              ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
+              : "https://placehold.co/780x440/111111/ffffff/png?text=Rockflix",
+          description: movie.overview || "No description available."
+        }));
+        setLiveMovies(catalog);
+      } catch {
+        setCatalogError("Live TMDB catalog could not be loaded.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadMovies();
+  }, []);
+
+  const catalog = liveMovies.length ? liveMovies : movies;
+  const genres = ["All", ...new Set(catalog.map((movie) => movie.genre))];
+  const filtered = useMemo(() => catalog.filter((movie) => {
     const matchesQuery = movie.title.toLowerCase().includes(query.toLowerCase());
     return matchesQuery && (genre === "All" || movie.genre === genre);
-  }), [query, genre]);
+  }), [catalog, query, genre]);
 
   return (
     <div className="app">
@@ -190,7 +240,16 @@ function App() {
             </div>
           </div>
 
-          {filtered.length ? (
+          {isLoading ? (
+            <div className="empty">
+              <h3>Loading movies...</h3>
+            </div>
+          ) : catalogError ? (
+            <div className="empty">
+              <h3>TMDB catalog unavailable</h3>
+              <p>{catalogError}</p>
+            </div>
+          ) : filtered.length ? (
             <div className="movie-grid">
               {filtered.map((movie) => (
                 <button className="movie-card" key={movie.id} onClick={() => setSelected(movie)}>
