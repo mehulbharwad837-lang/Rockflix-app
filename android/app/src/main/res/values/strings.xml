@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Rockflix</string>
+    <string name="title_activity_main">Rockflix</string>
+    <string name="package_name">mehulbharwad837.lang.rockflix</string>
+    <string name="custom_url_scheme">mehulbharwad837.lang.rockflix</string>
+</resources>

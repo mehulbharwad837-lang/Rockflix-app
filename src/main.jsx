@@ -1,0 +1,248 @@
+import React, { useMemo, useState } from "react";
+import { createRoot } from "react-dom/client";
+import "./styles.css";
+
+const movies = [
+  {
+    id: 1,
+    title: "Dune: Part Two",
+    year: "2024",
+    rating: "8.7",
+    genre: "Sci-Fi",
+    duration: "2h 46m",
+    image: "https://image.tmdb.org/t/p/w780/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg",
+    description: "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family."
+  },
+  {
+    id: 2,
+    title: "The Batman",
+    year: "2022",
+    rating: "7.8",
+    genre: "Crime",
+    duration: "2h 56m",
+    image: "https://image.tmdb.org/t/p/w780/74xTEgt7R36Fpooo50r9T25onhq.jpg",
+    description: "When a sadistic killer leaves cryptic clues, Batman ventures into Gotham's underworld to expose the city's corruption."
+  },
+  {
+    id: 3,
+    title: "John Wick: Chapter 4",
+    year: "2023",
+    rating: "7.7",
+    genre: "Action",
+    duration: "2h 49m",
+    image: "https://image.tmdb.org/t/p/w780/v4e0Y2n6SxR6U4xJQ1D7d9j6YtM.jpg",
+    description: "John Wick uncovers a path to defeating the High Table, but before he can earn his freedom, he must face a new enemy."
+  },
+  {
+    id: 4,
+    title: "Oppenheimer",
+    year: "2023",
+    rating: "8.3",
+    genre: "Drama",
+    duration: "3h 0m",
+    image: "https://image.tmdb.org/t/p/w780/fm6KqXpk3M2HVveHwCrBSSBaO0V.jpg",
+    description: "The story of J. Robert Oppenheimer and the immense scientific and ethical challenges of building the atomic bomb."
+  },
+  {
+    id: 5,
+    title: "Spider-Man: Across the Spider-Verse",
+    year: "2023",
+    rating: "8.6",
+    genre: "Animation",
+    duration: "2h 20m",
+    image: "https://image.tmdb.org/t/p/w780/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
+    description: "Miles Morales travels across the Multiverse and meets a team of Spider-People tasked with protecting its existence."
+  },
+  {
+    id: 6,
+    title: "Interstellar",
+    year: "2014",
+    rating: "8.7",
+    genre: "Sci-Fi",
+    duration: "2h 49m",
+    image: "https://image.tmdb.org/t/p/w780/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",
+    description: "A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival."
+  }
+];
+
+function Icon({ name, size = 20 }) {
+  const paths = {
+    search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>,
+    play: <path d="m8 5 11 7-11 7Z" fill="currentColor" />,
+    plus: <><path d="M12 5v14M5 12h14" /></>,
+    close: <><path d="m6 6 12 12M18 6 6 18" /></>,
+    chevron: <path d="m9 18 6-6-6-6" />,
+    star: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z" fill="currentColor" />
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
+}
+
+function App() {
+  const [query, setQuery] = useState("");
+  const [genre, setGenre] = useState("All");
+  const [selected, setSelected] = useState(null);
+
+  React.useEffect(() => {
+    const handleTvKeys = (event) => {
+      if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter"].includes(event.key)) return;
+
+      const candidates = [...document.querySelectorAll(
+        "button:not(:disabled), input:not(:disabled)"
+      )].filter((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+      if (!candidates.length) return;
+
+      const active = document.activeElement;
+      const currentIndex = candidates.indexOf(active);
+      if (event.key === "Enter") return;
+
+      event.preventDefault();
+      if (currentIndex < 0) {
+        candidates[0]?.focus();
+        return;
+      }
+
+      const current = candidates[currentIndex].getBoundingClientRect();
+      let next = candidates[currentIndex];
+      let bestDistance = Number.POSITIVE_INFINITY;
+
+      candidates.forEach((candidate, index) => {
+        if (index === currentIndex) return;
+        const rect = candidate.getBoundingClientRect();
+        let valid = false;
+
+        if (event.key === "ArrowRight") valid = rect.left > current.left;
+        if (event.key === "ArrowLeft") valid = rect.right < current.right;
+        if (event.key === "ArrowDown") valid = rect.top > current.top;
+        if (event.key === "ArrowUp") valid = rect.bottom < current.bottom;
+
+        if (!valid) return;
+        const dx = rect.left + rect.width / 2 - (current.left + current.width / 2);
+        const dy = rect.top + rect.height / 2 - (current.top + current.height / 2);
+        const distance = dx * dx + dy * dy;
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          next = candidate;
+        }
+      });
+      next.focus();
+    };
+
+    window.addEventListener("keydown", handleTvKeys);
+    return () => window.removeEventListener("keydown", handleTvKeys);
+  }, []);
+
+  const genres = ["All", ...new Set(movies.map((movie) => movie.genre))];
+  const filtered = useMemo(() => movies.filter((movie) => {
+    const matchesQuery = movie.title.toLowerCase().includes(query.toLowerCase());
+    return matchesQuery && (genre === "All" || movie.genre === genre);
+  }), [query, genre]);
+
+  return (
+    <div className="app">
+      <header className="nav">
+        <button className="brand" onClick={() => { setQuery(""); setGenre("All"); }}>ROCKFLIX</button>
+        <nav className="nav-links" aria-label="Main navigation">
+          <button className="active">Home</button>
+          <button onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })}>Movies</button>
+        </nav>
+        <label className="search">
+          <Icon name="search" size={18} />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search movies"
+            aria-label="Search movies"
+          />
+        </label>
+      </header>
+
+      <main>
+        <section className="hero" style={{ "--hero": `url('${movies[0].image}')` }}>
+          <div className="hero-content">
+            <span className="eyebrow">ROCKFLIX ORIGINAL</span>
+            <h1>DUNE <span>PART TWO</span></h1>
+            <div className="meta">
+              <strong><Icon name="star" size={16} /> 8.7</strong>
+              <span>2024</span>
+              <span>16+</span>
+              <span>2h 46m</span>
+            </div>
+            <p>{movies[0].description}</p>
+            <div className="hero-actions">
+              <button className="primary" onClick={() => setSelected(movies[0])}><Icon name="play" size={18} /> Play</button>
+              <button className="secondary" onClick={() => setSelected(movies[0])}><Icon name="plus" size={18} /> My List</button>
+            </div>
+          </div>
+        </section>
+
+        <section className="catalog" id="catalog">
+          <div className="section-heading">
+            <h2>Popular Movies</h2>
+            <div className="filters" aria-label="Filter by genre">
+              {genres.map((item) => (
+                <button key={item} className={genre === item ? "selected" : ""} onClick={() => setGenre(item)}>
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filtered.length ? (
+            <div className="movie-grid">
+              {filtered.map((movie) => (
+                <button className="movie-card" key={movie.id} onClick={() => setSelected(movie)}>
+                  <img src={movie.image} alt="" />
+                  <div className="card-shade" />
+                  <div className="card-info">
+                    <h3>{movie.title}</h3>
+                    <div><span>{movie.year}</span><span>{movie.genre}</span><strong><Icon name="star" size={13} /> {movie.rating}</strong></div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="empty">
+              <h3>No movies found</h3>
+              <p>Try another title or genre.</p>
+            </div>
+          )}
+        </section>
+      </main>
+
+      {selected && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => setSelected(null)}>
+          <article className="modal" role="dialog" aria-modal="true" aria-label={selected.title} onMouseDown={(event) => event.stopPropagation()}>
+            <button className="close" onClick={() => setSelected(null)} aria-label="Close details"><Icon name="close" /></button>
+            <img src={selected.image} alt={selected.title} />
+            <div className="modal-info">
+              <span className="eyebrow">{selected.genre}</span>
+              <h2>{selected.title}</h2>
+              <div className="meta">
+                <strong><Icon name="star" size={16} /> {selected.rating}</strong>
+                <span>{selected.year}</span>
+                <span>{selected.duration}</span>
+              </div>
+              <p>{selected.description}</p>
+              <button className="primary"><Icon name="play" size={18} /> Play Now</button>
+            </div>
+          </article>
+        </div>
+      )}
+    </div>
+  );
+}
+
+createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
